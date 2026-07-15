@@ -2,139 +2,124 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="SKYKING">
-<meta name="theme-color" content="#ffffff">
-<title>SKYKING 税单</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYKING 税单生成器</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#f2f2f7; --card:#fff; --ink:#1d1d1f; --sub:#6e6e73; --line:#e3e3e8;
-  --blue:#0a84ff; --blue-soft:#e8f2ff; --radius:16px;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
-  --safe-b:env(safe-area-inset-bottom); --safe-t:env(safe-area-inset-top);
+  --bg:#f5f5f7; --card:#ffffff; --ink:#1d1d1f; --sub:#6e6e73;
+  --line:#e5e5ea; --blue:#0071e3; --blue-soft:#e8f1fd; --green:#34c759;
+  --radius:16px; --shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.05);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0}
+*{box-sizing:border-box}
 body{
-  background:var(--bg);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
-  -webkit-font-smoothing:antialiased;font-size:16px;line-height:1.5;
-  padding-bottom:calc(66px + var(--safe-b));
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-size:15px; line-height:1.5;
 }
-.header{
-  position:sticky;top:0;z-index:40;
-  background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:1px solid var(--line);
-  padding:calc(10px + var(--safe-t)) 18px 12px;
-  display:flex;align-items:center;gap:10px;
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.72); backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--line); padding:14px 24px;
+  display:flex; align-items:center; gap:18px;
 }
-.header .logo{width:26px;height:26px}
-.header h1{font-size:18px;font-weight:600;margin:0;letter-spacing:.2px}
-.header .sub{font-size:12px;color:var(--sub);margin-left:auto}
-.page{padding:16px 15px 24px;max-width:760px;margin:0 auto}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:15px}
-h2{font-size:18px;font-weight:600;margin:0 0 4px}
-.muted{color:var(--sub);font-size:13px;line-height:1.45}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:.2px}
+.brand .logo{width:26px;height:26px}
+.seg{margin-left:auto;display:flex;background:#ececf0;border-radius:10px;padding:3px;gap:2px}
+.seg button{
+  border:0;background:transparent;padding:7px 18px;border-radius:8px;
+  font-size:14px;font-weight:500;color:var(--sub);cursor:pointer;transition:.15s;
+  font-family:inherit;
+}
+.seg button.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.wrap{max-width:1200px;margin:0 auto;padding:26px 24px 80px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:20px}
+h2{font-size:20px;font-weight:600;margin:0 0 4px}
+.muted{color:var(--sub);font-size:13.5px}
 .hidden{display:none!important}
 
-/* capture buttons */
-.cap-row{display:flex;gap:12px;margin-top:14px}
-.cap-btn{
-  flex:1;border:0;border-radius:14px;padding:18px 10px;cursor:pointer;font-family:inherit;
-  background:var(--blue-soft);color:var(--blue);font-size:15px;font-weight:600;
-  display:flex;flex-direction:column;align-items:center;gap:7px;
+/* upload */
+.drop{
+  border:2px dashed #cfd0d6;border-radius:14px;padding:40px 20px;text-align:center;
+  cursor:pointer;transition:.2s;background:#fafafc;
 }
-.cap-btn svg{width:26px;height:26px}
-.cap-btn.alt{background:#f0f0f4;color:var(--ink)}
+.drop:hover,.drop.drag{border-color:var(--blue);background:var(--blue-soft)}
+.drop .big{font-size:16px;font-weight:500;margin-bottom:6px}
+.drop svg{opacity:.5;margin-bottom:8px}
 
-.imgbox{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fafafc;margin-top:4px}
-.imgbox img{width:100%;display:block}
-.imgbox .cap{padding:9px 13px;font-size:12px;color:var(--sub);border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:20px}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
 
-label{display:block;font-size:12px;color:var(--sub);margin:0 0 6px;font-weight:500}
+.imgbox{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fafafc}
+.imgbox img{width:100%;display:block;cursor:zoom-in}
+.imgbox .cap{padding:8px 12px;font-size:12.5px;color:var(--sub);border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+
+/* form */
+label{display:block;font-size:12.5px;color:var(--sub);margin:0 0 5px;font-weight:500}
 input,select,textarea{
-  width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;
-  font-size:16px;font-family:inherit;color:var(--ink);background:#fff;-webkit-appearance:none;appearance:none;
+  width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;
+  font-size:14px;font-family:inherit;color:var(--ink);background:#fff;transition:.15s;
 }
-select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.15)}
-.field{margin-bottom:14px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,113,227,.12)}
+.field{margin-bottom:13px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-.items .it{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;position:relative}
-.items .it .row2{margin-top:9px}
-.items .it .amt{margin-top:9px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;text-align:right}
-.items .it .rm{position:absolute;top:8px;right:10px;border:0;background:transparent;color:#ff3b30;font-size:20px;line-height:1;cursor:pointer}
-.add-row{margin-top:12px;width:100%;background:var(--blue-soft);color:var(--blue);border:0;padding:13px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.items table{width:100%;border-collapse:collapse;margin-top:6px}
+.items th{font-size:11.5px;color:var(--sub);text-align:left;font-weight:600;padding:0 6px 6px}
+.items td{padding:3px 4px}
+.items input{padding:7px 8px;font-size:13.5px}
+.items td.amt{font-variant-numeric:tabular-nums;font-size:13.5px;padding:0 8px;color:var(--sub)}
+.icon-btn{border:0;background:transparent;color:#ff3b30;font-size:18px;cursor:pointer;padding:4px 6px;line-height:1}
+.add-row{margin-top:8px;background:var(--blue-soft);color:var(--blue);border:0;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
 
-.totals{margin-top:16px;border-top:1px solid var(--line);padding-top:13px;font-variant-numeric:tabular-nums}
-.totals .r{display:flex;justify-content:space-between;padding:4px 0;font-size:15px}
-.totals .r.grand{font-weight:700;font-size:17px;margin-top:3px}
+.totals{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;font-variant-numeric:tabular-nums}
+.totals .r{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}
+.totals .r.grand{font-weight:600;font-size:16px;margin-top:4px}
 
-.btn{border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;width:100%}
+.btnrow{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:11px;padding:11px 20px;font-size:14.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:.15s}
 .btn.primary{background:var(--blue);color:#fff}
-.btn.ghost{background:#f0f0f4;color:var(--ink)}
-.btn.sm{padding:11px;font-size:14px}
-.btn:disabled{opacity:.5}
-.stack{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.btn.primary:hover{background:#0062c4}
+.btn.ghost{background:#f0f0f3;color:var(--ink)}
+.btn.ghost:hover{background:#e7e7ec}
+.btn:disabled{opacity:.5;cursor:default}
 
-/* status pill */
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 12px;border-radius:20px;background:#f0f0f4;color:var(--sub)}
-.pill.work{background:#fff4e5;color:#b25b00}
-.pill.ok{background:#e6f7ec;color:#1a7f37}
-.spin{width:12px;height:12px;border:2px solid #d0d0d5;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-
-/* customer cards */
-.cust-item{border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:12px}
-.cust-item h3{margin:0 0 8px;font-size:16px;font-weight:600}
+/* customer list */
+.cust-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.cust-item{border:1px solid var(--line);border-radius:13px;padding:16px;position:relative}
+.cust-item h3{margin:0 0 8px;font-size:15.5px;font-weight:600}
 .cust-item .kv{font-size:12.5px;color:var(--sub);margin:2px 0}
-.cust-item .actions{margin-top:12px;display:flex;gap:9px}
-.cust-item .actions button{flex:1;font-size:13.5px;padding:9px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-family:inherit}
+.cust-item .actions{margin-top:12px;display:flex;gap:8px}
+.cust-item .actions button{font-size:12.5px;padding:5px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-family:inherit}
 .cust-item .actions button.del{color:#ff3b30;border-color:#ffd7d5}
 
-/* bottom tab bar */
-.tabbar{
-  position:fixed;left:0;right:0;bottom:0;z-index:45;
-  background:rgba(255,255,255,.9);backdrop-filter:saturate(180%) blur(20px);
-  border-top:1px solid var(--line);
-  display:flex;padding-bottom:var(--safe-b);
+/* status pill */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 12px;border-radius:20px;background:#f0f0f3;color:var(--sub)}
+.pill.work{background:#fff4e5;color:#b25b00}
+.pill.ok{background:#e6f7ec;color:#1a7f37}
+.spin{width:13px;height:13px;border:2px solid #d0d0d5;border-top-color:var(--blue);border-radius:50%;animation:sp 0.7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
+.overlay img{max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.modal{background:#fff;border-radius:18px;box-shadow:var(--shadow);width:min(560px,94vw);max-height:90vh;overflow:auto;padding:24px}
+.modal h2{margin-bottom:14px}
+.modal .btnrow{justify-content:flex-end;margin-top:18px}
+
+/* ===== printable tax invoice (matches SKYKING template) ===== */
+.invoice{
+  width:794px;background:#fff;color:#000;padding:26px 30px;
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:12px;line-height:1.32;
 }
-.tabbar button{
-  flex:1;border:0;background:transparent;padding:9px 0 8px;cursor:pointer;font-family:inherit;
-  display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--sub);font-size:11px;
-}
-.tabbar button.active{color:var(--blue)}
-.tabbar button svg{width:23px;height:23px}
-
-/* modals */
-.sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center}
-.sheet .panel{background:#fff;width:100%;max-width:640px;border-radius:20px 20px 0 0;max-height:92vh;overflow:auto;padding:20px 18px calc(20px + var(--safe-b))}
-.sheet .grip{width:38px;height:5px;border-radius:3px;background:#d5d5db;margin:0 auto 14px}
-.sheet h2{margin-bottom:14px}
-
-.imgview{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:14px}
-.imgview img{max-width:100%;max-height:100%;border-radius:10px}
-.imgview .x{position:absolute;top:calc(14px + var(--safe-t));right:18px;color:#fff;font-size:30px;background:none;border:0}
-
-.invwrap{position:fixed;inset:0;z-index:105;background:#111;display:flex;flex-direction:column}
-.invtop{display:flex;gap:10px;padding:calc(10px + var(--safe-t)) 14px 10px;background:#1c1c1e}
-.invtop .btn{flex:1}
-.invtop .btn.ghost{background:#3a3a3c;color:#fff}
-.invscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px;display:flex;justify-content:flex-start}
-
-/* ===== printable tax invoice (fixed 794px, exported) ===== */
-.invoice{width:794px;flex:0 0 auto;background:#fff;color:#000;padding:26px 30px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.32}
 .inv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .inv-logo{display:flex;align-items:center;gap:8px}
 .inv-logo .txt{font-size:30px;font-weight:800;color:#1ba0e2;letter-spacing:1px}
-.inv-tax{font-size:20px;font-weight:800;color:#0a2f7a}
+.inv-tax{font-size:20px;font-weight:800;color:#0a2f7a;letter-spacing:.5px}
 .inv-mid{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:8px}
 .inv-seller{border:1.5px solid #2b6cb0;border-radius:16px;padding:12px 16px;width:52%;font-size:11px}
 .inv-seller .reg{font-size:10.5px;margin-bottom:6px}
@@ -150,7 +135,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
 .inv-terms .u{text-decoration:underline;font-weight:600}
 table.inv-tbl{width:100%;border-collapse:collapse;margin-top:6px}
 table.inv-tbl th,table.inv-tbl td{border:1px solid #000;padding:4px 6px;font-size:11px}
-table.inv-tbl th{font-weight:600;text-align:left}
+table.inv-tbl th{background:#fff;font-weight:600;text-align:left}
 table.inv-tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
 .inv-sum td{border:1px solid #000;padding:3px 6px;font-size:11px}
 .inv-sum .n{text-align:right;font-variant-numeric:tabular-nums}
@@ -165,163 +150,196 @@ table.inv-tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
 .inv-totbox .r{display:flex;justify-content:space-between;padding:2px 0;font-variant-numeric:tabular-nums}
 .inv-totbox .cur{text-align:right;font-size:10.5px;color:#333;margin-top:2px}
 .inv-web{text-align:center;font-size:10px;color:#333;margin-top:16px}
+.inv-scroll{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#eee;padding:16px;display:flex;justify-content:center}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <svg class="logo" viewBox="0 0 40 40"><ellipse cx="20" cy="27" rx="17" ry="7" fill="#3aa84f"/><circle cx="20" cy="17" r="8" fill="#f5a623"/><path d="M4 27 Q13 15 20 24 Q27 15 36 27 Z" fill="#2f8f43"/></svg>
-  <h1>SKYKING 税单</h1>
-  <span class="sub" id="hint">开票</span>
-</div>
-
-<!-- ===== INVOICE ===== -->
-<div id="view-invoice" class="page">
-  <div class="card" id="uploadCard">
-    <h2>上传销售单</h2>
-    <p class="muted" style="margin:4px 0 0">拍照或从相册选销售单截图，自动识别客户与明细，生成税单。</p>
-    <div class="cap-row">
-      <button class="cap-btn" onclick="camEl.click()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        拍照
-      </button>
-      <button class="cap-btn alt" onclick="albEl.click()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        相册
-      </button>
-    </div>
-    <input type="file" id="cam" accept="image/*" capture="environment" class="hidden">
-    <input type="file" id="alb" accept="image/*" class="hidden">
+<div class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40"><ellipse cx="20" cy="27" rx="17" ry="7" fill="#3aa84f"/><circle cx="20" cy="17" r="8" fill="#f5a623"/><path d="M4 27 Q13 15 20 24 Q27 15 36 27 Z" fill="#2f8f43"/></svg>
+    <span>SKYKING 税单生成器</span>
   </div>
-
-  <div id="stage" class="hidden">
-    <div class="card">
-      <div class="imgbox">
-        <img id="preview" alt="截图" onclick="zoomImg()">
-        <div class="cap"><span id="ocrStatus"><span class="pill">待识别</span></span><span>点图放大核对</span></div>
-      </div>
-      <div class="row2" style="margin-top:12px">
-        <button class="btn ghost sm" onclick="rerunOCR()">重新识别</button>
-        <button class="btn ghost sm" onclick="resetStage()">换一张</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="field">
-        <label>客户（公司全称）</label>
-        <select id="custSelect"></select>
-      </div>
-      <div class="row2">
-        <div class="field"><label>日期</label><input type="date" id="invDate"></div>
-        <div class="field"><label>Reference（自动）</label><input type="text" id="invRef" placeholder="导出时生成"></div>
-      </div>
-
-      <div class="items">
-        <label>商品明细（VAT 自动算，无需列入）</label>
-        <div id="itemBody"></div>
-        <button class="add-row" onclick="addItem()">＋ 添加一行</button>
-      </div>
-
-      <div class="totals">
-        <div class="r"><span>Total (Excl)</span><span id="tExcl">0.00</span></div>
-        <div class="r"><span>VAT (15%)</span><span id="tVat">0.00</span></div>
-        <div class="r grand"><span>Total (Incl)</span><span id="tIncl">0.00</span></div>
-      </div>
-
-      <div class="stack">
-        <button class="btn ghost" onclick="showInvoicePreview()">预览税单</button>
-        <button class="btn primary" onclick="exportPDF()">导出 PDF</button>
-        <button class="btn ghost" onclick="exportExcel()">导出 Excel</button>
-      </div>
-    </div>
+  <div class="seg">
+    <button id="tab-invoice" class="active" onclick="switchTab('invoice')">开票</button>
+    <button id="tab-cust" onclick="switchTab('cust')">客户管理</button>
   </div>
 </div>
 
-<!-- ===== CUSTOMERS ===== -->
-<div id="view-cust" class="page hidden">
+<div class="wrap">
+
+<!-- ============ INVOICE TAB ============ -->
+<div id="view-invoice">
+  <div class="card">
+    <h2>上传销售单截图</h2>
+    <p class="muted" style="margin:2px 0 16px">销售打印预览截图上传后，自动识别客户并填入税单。识别结果可在右侧修改确认。</p>
+    <div id="drop" class="drop">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a8a8e" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      <div class="big">点击或拖入截图</div>
+      <div class="muted">支持 PNG / JPG</div>
+      <input type="file" id="file" accept="image/*" class="hidden">
+    </div>
+
+    <div id="stage" class="hidden">
+      <div class="cols">
+        <div>
+          <div class="imgbox">
+            <img id="preview" alt="截图">
+            <div class="cap"><span id="ocrStatus"><span class="pill">待识别</span></span><span>点击图片放大确认</span></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:10px">
+            <button class="btn ghost" onclick="rerunOCR()">重新识别</button>
+            <button class="btn ghost" onclick="resetStage()">换一张</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="field">
+            <label>客户（公司全称）</label>
+            <select id="custSelect" onchange="onCustChange()"></select>
+          </div>
+          <div class="row2">
+            <div class="field"><label>日期</label><input type="date" id="invDate"></div>
+            <div class="field"><label>Reference（自动）</label><input type="text" id="invRef" placeholder="导出时生成"></div>
+          </div>
+
+          <div class="items">
+            <label>商品明细（VAT 自动计算，无需列入）</label>
+            <table>
+              <thead><tr><th style="width:44%">Item Description</th><th>Qty</th><th>Unit Price</th><th style="width:22%">Total</th><th style="width:26px"></th></tr></thead>
+              <tbody id="itemBody"></tbody>
+            </table>
+            <button class="add-row" onclick="addItem()">＋ 添加一行</button>
+          </div>
+
+          <div class="totals">
+            <div class="r"><span>Total (Excl)</span><span id="tExcl">0.00</span></div>
+            <div class="r"><span>VAT (15%)</span><span id="tVat">0.00</span></div>
+            <div class="r grand"><span>Total (Incl)</span><span id="tIncl">0.00</span></div>
+          </div>
+
+          <div class="btnrow" style="margin-top:18px">
+            <button class="btn primary" onclick="exportPDF()">导出 PDF</button>
+            <button class="btn ghost" onclick="exportExcel()">导出 Excel</button>
+            <button class="btn ghost" onclick="showInvoicePreview()">预览税单</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOMER TAB ============ -->
+<div id="view-cust" class="hidden">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <h2>客户管理</h2>
-      <button class="btn primary sm" style="width:auto;padding:9px 16px" onclick="openCustForm()">＋ 新增</button>
+      <div><h2>客户管理</h2><p class="muted" style="margin:2px 0 0">提前录入客户信息，截图识别时自动匹配填入税单。</p></div>
+      <button class="btn primary" onclick="openCustForm()">＋ 新增客户</button>
     </div>
-    <p class="muted" style="margin:6px 0 0">别名用于截图自动匹配（逗号分隔）。</p>
-    <div id="custList"></div>
+    <div class="cust-list" id="custList" style="margin-top:18px"></div>
   </div>
 </div>
 
-<!-- bottom tabs -->
-<div class="tabbar">
-  <button id="tab-invoice" class="active" onclick="switchTab('invoice')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-    开票
-  </button>
-  <button id="tab-cust" onclick="switchTab('cust')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13A4 4 0 0116 11"/></svg>
-    客户
-  </button>
-</div>
+</div><!-- /wrap -->
 
+<!-- hidden render target for export -->
 <div style="position:fixed;left:-99999px;top:0" id="renderMount"></div>
 
 <script>
-const ICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAGkUlEQVR4nO3dsY4cRRCH8d6TTzoJckTmlDdATomIkAPegUfiHQgQEREp4g2ckiHnRneyJZbgvGg8zOxOz3R3Vf3r+8XAdU9/V9u33jOn8/lcPHh6+uBjIdjt4eH+ZL2Gk1XQBKzPIvChQRNxXqPi7h40EWOuZ9zdgiZk3NIj7OZBEzJqtQz7rtV/qBRixj4tu2kyoQkZrRyd1ocnNDGjpaM9HQqamNHDka52XTkIGaPUXkGqJzQxY6Ta3qqCJmZYqOluc9DEDEtb+2v6PjRgbVPQTGd4sKXDm0ETMzy51ePVoIkZHl3rkjs0pKwGzXSGZ2t9LgZNzIhgqVOuHJDyv6CZzohk3isTGlI+CZrpjIim3TKhIYWgIeW/oLluILJLv0xoSCFoSDmdz2euG5DBhIYUgoYUgoaUO+7PUMKEhhSChhSChhSChpQX1gtQ9M/PX23+Z+9ev+m4knxOj4/vedvugJp4tyLy/Qh6hx4RryHuOgRdYWTIc4S9DUFvYBnyHGFfR9BXeAp5jrCX8bbdCs8xl+J/fVYIekGUWKKscySuHBORA+EK8owJ/VHkmEuJv/5WCLroxKCyjyPSB60Wgdp+aqUOWvXwVfe1Rdqg1Q9dfX9r0gYNTSmDzjK9suxzKl3Q2Q45235TBZ3tcC8y7TtV0NCXJuhMU2pJlv2nCRo5pAg6y3S6JcNzSBE08pAPOsNUqqH+POSDRi4EDSnSQau/vO6l/Fykg0Y+BA0pBA0pBA0pskEr/+DTgurzkQ0aORE0pBA0pBA0pBA0pBA0pBA0SimlfP3jt9ZLaIKgIRNzKQS96tXbl9ZLGE4hbIJecIk5Q9QKEU/JBr33b7TPEHEpz89nKebogcsG3Ypq4NHDXUPQE2vxqka9JnLsBP3RrWiVolbayxxBF+0Dntu616hTWjro1v+rs0zhRyUd9Ba1kUaOunbtEad06qD3xhkx6ohr3kM+6LVrR5YDLiXXXuWD7iVLJNGuHSmCnk/pVjFGiDrCGltKEfRU6wP2HEyrtUWa0mmCvnv9xnV8aCNN0D15/EZpvaYoUzpN0L0PxFPUntYyWoqgR00XDyH1XEOEKS0fdIRDQDvSQVvEbDmlPbxCWJMO2opFWKO+pvdXPNmgrR8809KGZNDWMY82+pvH8/OVC9rTwx4RGq8En5IL2puewVnG7GlwTEkF7fUhM0XHkQnaa8y9ePgm8fjMJYL2+GDnWgboIWavJIKOokWIrX/x9yhvw+SF9QKO8vZAb3n19mX5/Ys/q/+9S8jR9jta6KAzHO50ImfY71Gnx8f3Z+tF7BH9cK9N6aVrhff9/vHDr9ZLKKUEndDeD3eLy9XD2504On4oNKT013J5WWO4oL08uFGy7feoUEErHq7SnjzsJUzQHh5WL2t7U95zL2GCVjePN2rM1usOEbT1Qxot235bch90psNV2avlPlwHrXLANTLuuSXXQQO13AbNpIrN6vxcBk3M2Mtd0MSsw+Is3QUNHOEqaKazntFn6iZoYkYLLj7gHyHmz7783HoJ5e+/3lkvYbdRvwBg/gF/y5g9RFqjZr2R4z/CPOieogXb0q29qwZveuVoNZ0zh9taz9BHXDvMJvSRmAm4n/mzjTbJTSZ0bcwE7MfRwHtPabd3aCL2aXouHqf38Al9bToTcVw1cfec0kMn9FrMhBzf5Qytp/awCb0UMyHruhV2ryltcocmZH1WE3vIZzmm05mYc1k7715/Qtw9aGLGyHMf+i7HN798P+pLwZnfvvtpyNcZ9vFRYs5t1Pm7+Tw00AJBQ8qwoEfdoeCT3B0aGOHu4eH+NOqLMaVzGnnuwyc0Uecy+rxP5/O5PD19MPmtFd7K02U1uEyDviBsHdavwKfz+bll66hLIezIrEMupZSHh/uTq6CniNs/DxFPuQ56irj98Bbx1CdBl+I76ikCH8dzwFOXt59DBj1H4O1ECXhOKug1hL4uarhrFoMuRS/qa5SDVwv2mumfdqcOuoaH+DNFWuNq0KUQNeKYfxaJT9tBymLQIz+BB+y11OnqhCZqeLbWJ1cOSLkaNFMaHl3r8uaEJmp4cqvHTVcOooYHWzrkDg0pm4NmSsPS1v6qJjRRw0JNd9VXDqLGSLW9LX6WYys+84Fe9g7OQz8UMq3Rw5GuDr/LQdRo6WhPh64cc1xBsFerwdj0fWimNfZo2U3TCT3FtMYtPQZgt6AvCBtzPV/Juwc9Rdx5jbqODg16irj1WfxM9S/sj6yMyEW4xQAAAABJRU5ErkJggg==";
-// inject apple-touch-icon + manifest for "add to home screen"
-(function(){
-  const l=document.createElement('link');l.rel='apple-touch-icon';l.href=ICON;document.head.appendChild(l);
-  const m={name:"SKYKING 税单",short_name:"SKYKING",display:"standalone",background_color:"#f2f2f7",theme_color:"#ffffff",
-    start_url:".",icons:[{src:ICON,sizes:"180x180",type:"image/png"}]};
-  const url=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
-  const ml=document.createElement('link');ml.rel='manifest';ml.href=url;document.head.appendChild(ml);
-})();
-
-/* ================= DATA ================= */
-const SELLER={
+/* ================= DATA LAYER ================= */
+const SELLER = {
+  name:"SKYKING®",
   reg:"Registration 2012/135100/07/VAT Registration 4040271209",
   lines:["POSTNET SUITE 88","PRIVATE BAG X19","GARDENVIW","2047","Tel. 011-8300785","skykingsolar@hotmail.com"],
   web:"www.skykingsolar.co.za"
 };
 const LS_CUST="skyking_customers_v1", LS_SEQ="skyking_refseq_v1";
-function seedCustomers(){return [{id:"cajees",name:"Cajees lighting and decor Pty Ltd",addr:"43 Rapportryer street\nTrichardt 2300",vat:"4920220284",reg:"2017/497303/07",regDate:"",contact:"0176380642",aliases:"cajee, v-cajee, cajees, cajee's"}];}
-function loadCustomers(){try{const r=JSON.parse(localStorage.getItem(LS_CUST));if(Array.isArray(r)&&r.length)return r;}catch(e){}const s=seedCustomers();saveCustomers(s);return s;}
-function saveCustomers(l){localStorage.setItem(LS_CUST,JSON.stringify(l));}
 
-/* ================= PURE LOGIC (tested) ================= */
+function seedCustomers(){
+  return [{
+    id:"cajees",
+    name:"Cajees lighting and decor Pty Ltd",
+    addr:"43 Rapportryer street\nTrichardt 2300",
+    vat:"4920220284",
+    reg:"2017/497303/07",
+    regDate:"",
+    contact:"0176380642",
+    aliases:"cajee, v-cajee, cajees, cajee's"
+  }];
+}
+function loadCustomers(){
+  try{const r=JSON.parse(localStorage.getItem(LS_CUST));if(Array.isArray(r)&&r.length)return r;}catch(e){}
+  const s=seedCustomers(); saveCustomers(s); return s;
+}
+function saveCustomers(list){localStorage.setItem(LS_CUST,JSON.stringify(list));}
+
+/* ================= PURE LOGIC (tested in Node) ================= */
 function money(n){return (Math.round((Number(n)||0)*100)/100).toFixed(2);}
-function calcTotals(items){const excl=items.reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.price)||0),0);const vat=excl*0.15;return{excl,vat,incl:excl+vat};}
+function calcTotals(items){
+  const excl=items.reduce((s,it)=>s+(Number(it.qty)||0)*(Number(it.price)||0),0);
+  const vat=excl*0.15; return {excl, vat, incl:excl+vat};
+}
 function pad3(n){return String(n).padStart(3,"0");}
-function ymd(d){return (d||"").replaceAll("-","");}
-function buildRef(d,seq){return "SK"+ymd(d)+pad3(seq);}
-function nextSeq(map,key){return (map[key]||0)+1;}
-function matchCustomer(text,customers){
-  const t=(text||"").toLowerCase();let best=null,bs=0;
-  for(const c of customers){const keys=[c.name,...(c.aliases||"").split(",")].map(s=>s.trim().toLowerCase()).filter(Boolean);
-    for(const k of keys){if(k.length<3)continue;if(t.includes(k)&&k.length>bs){best=c;bs=k.length;}}}
+function ymd(dateStr){ // yyyy-mm-dd -> yyyymmdd
+  return (dateStr||"").replaceAll("-","");
+}
+// reference: SK + YYYYMMDD + 3-digit sequence for that day
+function buildRef(dateStr, seq){return "SK"+ymd(dateStr)+pad3(seq);}
+function nextSeq(seqMap, dateKey){return (seqMap[dateKey]||0)+1;}
+
+// match customer from OCR text using name + aliases
+function matchCustomer(text, customers){
+  const t=(text||"").toLowerCase();
+  let best=null, bestScore=0;
+  for(const c of customers){
+    const keys=[c.name, ...(c.aliases||"").split(",")].map(s=>s.trim().toLowerCase()).filter(Boolean);
+    for(const k of keys){
+      if(k.length<3) continue;
+      if(t.includes(k) && k.length>bestScore){best=c;bestScore=k.length;}
+    }
+  }
   return best;
 }
+
+const UNITS=/\b(pcs?|mtrs?|mtr|set|sets|roll|rolls|box|boxes|unit|units|kg|pkt|pkts|ea|bag|bags)\b/ig;
+// Table-aware parser: only the item region, and each row must satisfy qty*price≈amount.
 function parseItems(text){
-  const out=[];const lines=(text||"").split(/\r?\n/);
-  const SKIP=/^(date|name|inv|tel|add|total|discount|balance|payment|item|qty|unit|price|amount|skyking|单据|打印|备注|reference|terms)/i;
-  for(let raw of lines){
-    const line=raw.trim();if(!line)continue;
-    if(/\bvat\b/i.test(line))continue;
-    if(/(total|discount|balance|payment)/i.test(line))continue;
-    if(SKIP.test(line))continue;
+  const rawLines=(text||"").split(/\r?\n/).map(l=>l.trim());
+  let start=0,end=rawLines.length,headerFound=false;
+  const hIdx=rawLines.findIndex(l=>/(\bitem\b|品名|\bqty\b|数量|price|单价|amount)/i.test(l));
+  if(hIdx>=0){start=hIdx+1;headerFound=true;}
+  const fIdx=rawLines.findIndex((l,i)=>i>=start && /(单据备注|^total\b|total to pay|discount|balance|payments|打印时间|^[-–—]{3,})/i.test(l));
+  if(fIdx>=0)end=fIdx;
+  const region=rawLines.slice(start,end);
+  const out=[];
+  for(const line of region){
+    if(!line) continue;
+    if(/\bvat\b/i.test(line)) continue;                 // VAT handled separately
+    if(/(discount|balance|payment|total)/i.test(line)) continue;
     const nums=(line.match(/\d+(?:\.\d+)?/g)||[]).map(Number);
-    if(nums.length<2)continue;
-    let desc=line.replace(/\bpcs?\b/ig,' ').replace(/[|]/g,' ').replace(/(^|[\s(])\d+(?:\.\d+)?(?=$|[\s)])/g,' ').replace(/[一-鿿]+/g,'').replace(/\s{2,}/g,' ').trim();
-    if(desc.replace(/[^a-z0-9]/ig,'').length<2)continue;
-    let qty,price;
-    if(nums.length>=3){const [a,b,c]=nums.slice(-3);if(Math.abs(a*b-c)<0.5){qty=a;price=b;}else{qty=nums[0];price=nums[nums.length-2];}}
-    else{qty=nums[0];price=nums[1];}
-    if(!qty||qty>100000)qty=1;
-    out.push({desc,qty,price:price||0});
+    if(nums.length<3) continue;                          // real product row shows qty, price, amount
+    let qty=null,price=null;
+    for(let i=0;i+2<nums.length;i++){
+      const a=nums[i],b=nums[i+1],c=nums[i+2];
+      if(b!==0 && Math.abs(a*b-c)<=Math.max(0.5,c*0.02)){qty=a;price=b;break;}
+    }
+    if(qty===null){ if(!headerFound) continue; qty=nums[nums.length-3];price=nums[nums.length-2]; }
+    let desc=line.replace(UNITS,' ').replace(/[|]/g,' ')
+      .replace(/(^|[\s(])\d+(?:\.\d+)?%?(?=$|[\s)])/g,' ')
+      .replace(/[一-鿿]+/g,'').replace(/[^\x00-\x7F]+/g,' ')
+      .replace(/\s{2,}/g,' ').trim();
+    if(desc.replace(/[^a-z0-9]/ig,'').length<2) continue;
+    if(!qty||qty>1000000) qty=1;
+    out.push({desc, qty, price:price||0});
   }
   return out;
 }
 
 /* ================= STATE ================= */
-let customers=loadCustomers(),items=[],currentImage=null,editingCustId=null;
-const camEl=document.getElementById('cam'),albEl=document.getElementById('alb');
+let customers=loadCustomers();
+let items=[];
+let currentImage=null;
+let editingCustId=null;
 
 /* ================= TABS ================= */
 function switchTab(t){
@@ -329,77 +347,104 @@ function switchTab(t){
   document.getElementById('view-cust').classList.toggle('hidden',t!=='cust');
   document.getElementById('tab-invoice').classList.toggle('active',t==='invoice');
   document.getElementById('tab-cust').classList.toggle('active',t==='cust');
-  document.getElementById('hint').textContent=t==='invoice'?'开票':'客户管理';
-  if(t==='cust')renderCustList();else refreshCustSelect();
-  window.scrollTo(0,0);
+  if(t==='cust') renderCustList();
+  if(t==='invoice') refreshCustSelect();
 }
 
-/* ================= UPLOAD ================= */
-camEl.onchange=e=>{if(e.target.files[0])loadImage(e.target.files[0]);};
-albEl.onchange=e=>{if(e.target.files[0])loadImage(e.target.files[0]);};
+/* ================= INVOICE TAB ================= */
+const dropEl=document.getElementById('drop'), fileEl=document.getElementById('file');
+dropEl.onclick=()=>fileEl.click();
+fileEl.onchange=e=>{if(e.target.files[0]) loadImage(e.target.files[0]);};
+['dragover','dragenter'].forEach(ev=>dropEl.addEventListener(ev,e=>{e.preventDefault();dropEl.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>dropEl.addEventListener(ev,e=>{e.preventDefault();dropEl.classList.remove('drag');}));
+dropEl.addEventListener('drop',e=>{if(e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);});
+
 function loadImage(file){
   const rd=new FileReader();
   rd.onload=()=>{
     currentImage=rd.result;
     document.getElementById('preview').src=currentImage;
-    document.getElementById('uploadCard').classList.add('hidden');
+    document.getElementById('drop').classList.add('hidden');
     document.getElementById('stage').classList.remove('hidden');
-    if(!document.getElementById('invDate').value)document.getElementById('invDate').value=new Date().toISOString().slice(0,10);
+    if(!document.getElementById('invDate').value)
+      document.getElementById('invDate').value=new Date().toISOString().slice(0,10);
     refreshCustSelect();
     if(!items.length){items=[{desc:'',qty:1,price:0}];renderItems();}
-    rerunOCR();window.scrollTo(0,0);
+    rerunOCR();
   };
   rd.readAsDataURL(file);
 }
 function resetStage(){
-  currentImage=null;items=[];renderItems();
-  document.getElementById('uploadCard').classList.remove('hidden');
+  currentImage=null; items=[]; renderItems();
+  document.getElementById('drop').classList.remove('hidden');
   document.getElementById('stage').classList.add('hidden');
-  camEl.value='';albEl.value='';document.getElementById('invRef').value='';
+  document.getElementById('file').value='';
+  document.getElementById('invRef').value='';
   setOcr('<span class="pill">待识别</span>');
 }
-function setOcr(h){document.getElementById('ocrStatus').innerHTML=h;}
-function zoomImg(){
-  if(!currentImage)return;
-  const v=document.createElement('div');v.className='imgview';
-  v.innerHTML=`<button class="x">&times;</button><img src="${currentImage}">`;
-  v.onclick=()=>v.remove();document.body.appendChild(v);
+function setOcr(html){document.getElementById('ocrStatus').innerHTML=html;}
+
+function preprocess(dataURL){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=img.width?Math.min(2.2,1700/img.width):1;
+      const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      const ctx=cv.getContext('2d');ctx.drawImage(img,0,0,w,h);
+      try{
+        const id=ctx.getImageData(0,0,w,h),d=id.data;
+        for(let i=0;i<d.length;i+=4){
+          const g=0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];
+          const v=g>165?255:(g<115?0:g);
+          d[i]=d[i+1]=d[i+2]=v;
+        }
+        ctx.putImageData(id,0,0);
+      }catch(e){}
+      res(cv);
+    };
+    img.onerror=()=>res(null);
+    img.src=dataURL;
+  });
 }
 async function rerunOCR(){
-  if(!currentImage)return;
-  if(typeof Tesseract==='undefined'){setOcr('<span class="pill">需联网加载识别，可手动选客户</span>');return;}
+  if(!currentImage) return;
+  if(typeof Tesseract==='undefined'){setOcr('<span class="pill">OCR 未加载（需联网），可手动选择客户</span>');return;}
   setOcr('<span class="pill work"><span class="spin"></span>识别中…</span>');
   try{
-    const {data}=await Tesseract.recognize(currentImage,'eng',{});
+    const cv=await preprocess(currentImage);
+    const {data}=await Tesseract.recognize(cv||currentImage,'eng',{});
     const text=data.text||'';
     const c=matchCustomer(text,customers);
-    if(c)document.getElementById('custSelect').value=c.id;
+    if(c){document.getElementById('custSelect').value=c.id;}
     const parsed=parseItems(text);
     if(parsed.length){items=parsed;renderItems();}
-    setOcr(c?`<span class="pill ok">✓ 已匹配客户</span>`:'<span class="pill work">未匹配，请手动选客户</span>');
-  }catch(err){console.error(err);setOcr('<span class="pill work">识别失败，请手动填写</span>');}
+    setOcr(`<span class="pill ${c?'ok':'work'}">${c?'✓ 已匹配客户':'未匹配客户，请手动选择'} · 识别 ${parsed.length} 项，请核对</span>`);
+  }catch(err){
+    console.error(err);
+    setOcr('<span class="pill work">识别失败，请手动填写</span>');
+  }
 }
 
 function refreshCustSelect(){
-  const sel=document.getElementById('custSelect');if(!sel)return;const cur=sel.value;
-  sel.innerHTML='<option value="">— 选择客户 —</option>'+customers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  if(cur)sel.value=cur;
+  const sel=document.getElementById('custSelect'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— 选择客户 —</option>'+
+    customers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  if(cur) sel.value=cur;
 }
+function onCustChange(){/* nothing else needed; used at export */}
 
-/* ================= ITEMS ================= */
 function renderItems(){
   const tb=document.getElementById('itemBody');
   tb.innerHTML=items.map((it,i)=>`
-    <div class="it">
-      <button class="rm" onclick="delItem(${i})">&times;</button>
-      <label>商品描述</label>
-      <input value="${escapeAttr(it.desc||'')}" oninput="upd(${i},'desc',this.value)" placeholder="Item description">
-      <div class="row2">
-        <div><label>数量</label><input type="number" inputmode="decimal" min="0" value="${it.qty??''}" oninput="upd(${i},'qty',this.value)"></div>
-        <div><label>单价</label><input type="number" inputmode="decimal" min="0" step="0.01" value="${it.price??''}" oninput="upd(${i},'price',this.value)"></div>
-      </div>
-      <div class="amt">小计 ${money((Number(it.qty)||0)*(Number(it.price)||0))}</div>
-    </div>`).join('');
+    <tr>
+      <td><input value="${escapeHtml(it.desc||'')}" oninput="upd(${i},'desc',this.value)"></td>
+      <td><input type="number" min="0" value="${it.qty??''}" oninput="upd(${i},'qty',this.value)"></td>
+      <td><input type="number" min="0" step="0.01" value="${it.price??''}" oninput="upd(${i},'price',this.value)"></td>
+      <td class="amt">${money((Number(it.qty)||0)*(Number(it.price)||0))}</td>
+      <td><button class="icon-btn" onclick="delItem(${i})">×</button></td>
+    </tr>`).join('');
   const t=calcTotals(items);
   document.getElementById('tExcl').textContent=money(t.excl);
   document.getElementById('tVat').textContent=money(t.vat);
@@ -409,109 +454,204 @@ function upd(i,k,v){items[i][k]=v;renderItems();}
 function addItem(){items.push({desc:'',qty:1,price:0});renderItems();}
 function delItem(i){items.splice(i,1);if(!items.length)items.push({desc:'',qty:1,price:0});renderItems();}
 
-/* ================= REFERENCE ================= */
+/* zoom modal */
+document.getElementById('preview').addEventListener('click',()=>{
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<img src="${currentImage}">`;ov.onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+});
+
+/* ================= REFERENCE NUMBER ================= */
 function loadSeqMap(){try{return JSON.parse(localStorage.getItem(LS_SEQ))||{};}catch(e){return{};}}
 function assignRef(){
-  let ref=document.getElementById('invRef').value.trim();if(ref)return ref;
+  let ref=document.getElementById('invRef').value.trim();
+  if(ref) return ref; // manual override kept
   const date=document.getElementById('invDate').value||new Date().toISOString().slice(0,10);
-  return buildRef(date,nextSeq(loadSeqMap(),ymd(date)));
+  const key=ymd(date);
+  const map=loadSeqMap();
+  const seq=nextSeq(map,key);
+  ref=buildRef(date,seq);
+  return ref; // committed only on export (commitRef)
 }
 function commitRef(ref,date){
-  const key=ymd(date),map=loadSeqMap(),seq=parseInt(ref.slice(-3),10);
-  if(!isNaN(seq))map[key]=Math.max(map[key]||0,seq);
+  const key=ymd(date);
+  const map=loadSeqMap();
+  const seq=parseInt(ref.slice(-3),10);
+  if(!isNaN(seq)) map[key]=Math.max(map[key]||0,seq);
   localStorage.setItem(LS_SEQ,JSON.stringify(map));
 }
 
-/* ================= BUILD INVOICE ================= */
-function getSelectedCustomer(){const id=document.getElementById('custSelect').value;return customers.find(c=>c.id===id)||null;}
+/* ================= BUILD INVOICE DOM ================= */
+function getSelectedCustomer(){
+  const id=document.getElementById('custSelect').value;
+  return customers.find(c=>c.id===id)||null;
+}
 function buildInvoiceNode(ref){
   const cust=getSelectedCustomer();
   const date=document.getElementById('invDate').value||new Date().toISOString().slice(0,10);
-  const dd=date.split('-');const dateFmt=dd.length===3?`${dd[2]}/${dd[1]}/${dd[0]}`:date;
+  const dd=date.split('-'); const dateFmt=dd.length===3?`${dd[2]}/${dd[1]}/${dd[0]}`:date;
   const t=calcTotals(items);
   const rows=items.filter(it=>(it.desc||'').trim()||Number(it.qty)||Number(it.price));
-  const buyer=cust?(`<div class="nm">${escapeHtml(cust.name)}</div>`+cust.addr.split('\n').map(l=>`<div>${escapeHtml(l)}</div>`).join('')+(cust.vat?`<div>Vat : ${escapeHtml(cust.vat)}</div>`:'')+(cust.reg?`<div>Reg: ${escapeHtml(cust.reg)}</div>`:'')+(cust.contact?`<div>Contact : ${escapeHtml(cust.contact)}</div>`:'')):'<div class="nm">（未选择客户）</div>';
-  const node=document.createElement('div');node.className='invoice';
+  const buyerLines = cust ? (
+    `<div class="nm">${escapeHtml(cust.name)}</div>`+
+    cust.addr.split('\n').map(l=>`<div>${escapeHtml(l)}</div>`).join('')+
+    (cust.vat?`<div>Vat : ${escapeHtml(cust.vat)}</div>`:'')+
+    (cust.reg?`<div>Reg: ${escapeHtml(cust.reg)}</div>`:'')+
+    (cust.contact?`<div>Contact : ${escapeHtml(cust.contact)}</div>`:'')
+  ) : '<div class="nm">（未选择客户）</div>';
+
+  const node=document.createElement('div');
+  node.className='invoice';
   node.innerHTML=`
     <div class="inv-head">
-      <div class="inv-logo"><svg width="40" height="40" viewBox="0 0 40 40"><ellipse cx="20" cy="28" rx="16" ry="6" fill="#3aa84f"/><circle cx="20" cy="18" r="7.5" fill="#f5a623"/><path d="M5 28 Q13 17 20 25 Q27 17 35 28 Z" fill="#2f8f43"/></svg><span class="txt">SKYKING®</span></div>
+      <div class="inv-logo">
+        <svg width="40" height="40" viewBox="0 0 40 40"><ellipse cx="20" cy="28" rx="16" ry="6" fill="#3aa84f"/><circle cx="20" cy="18" r="7.5" fill="#f5a623"/><path d="M5 28 Q13 17 20 25 Q27 17 35 28 Z" fill="#2f8f43"/></svg>
+        <span class="txt">SKYKING®</span>
+      </div>
       <div class="inv-tax">TAX INVOICE</div>
     </div>
     <div class="inv-mid">
-      <div class="inv-seller"><div class="reg">${escapeHtml(SELLER.reg)}</div>${SELLER.lines.map(l=>`<div>${escapeHtml(l)}</div>`).join('')}</div>
+      <div class="inv-seller">
+        <div class="reg">${escapeHtml(SELLER.reg)}</div>
+        ${SELLER.lines.map(l=>`<div>${escapeHtml(l)}</div>`).join('')}
+      </div>
       <div class="inv-right">
-        <div class="inv-daterow"><div><div class="lbl">Date</div><div class="val">${dateFmt}</div></div><div><div class="lbl">Reference</div><div class="val">${escapeHtml(ref)}</div></div></div>
-        <div class="inv-buyer">${buyer}</div>
+        <div class="inv-daterow">
+          <div><div class="lbl">Date</div><div class="val">${dateFmt}</div></div>
+          <div><div class="lbl">Reference</div><div class="val">${escapeHtml(ref)}</div></div>
+        </div>
+        <div class="inv-buyer">${buyerLines}</div>
       </div>
     </div>
     <div class="inv-terms"><div>TERMS OF PAYMENT</div><div class="u">100% BALANCE TO BE PAID BEFORE DELIVERY</div></div>
-    <table class="inv-tbl"><thead><tr><th style="width:16%">Item Code</th><th style="width:40%">Item Description</th><th style="width:12%">Quantity</th><th style="width:16%">Unit Price</th><th style="width:16%">Total(Excl)</th></tr></thead><tbody>
-      ${rows.map(it=>`<tr><td>Accessories</td><td>${escapeHtml(it.desc||'')}</td><td class="n">${Number(it.qty)||0}</td><td class="n">${money(it.price)}</td><td class="n">${money((Number(it.qty)||0)*(Number(it.price)||0))}</td></tr>`).join('')}
-      ${Array.from({length:Math.max(0,3-rows.length)}).map(()=>`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`).join('')}
-    </tbody></table>
-    <table class="inv-sum"><tr><td style="width:84%">Total (Excl)</td><td class="n">${money(t.excl)}</td></tr><tr><td>VAT (15%)</td><td class="n">${money(t.vat)}</td></tr><tr><td><b>Total</b></td><td class="n"><b>${money(t.incl)}</b></td></tr></table>
-    <div class="inv-boiler"><div class="c" style="font-weight:600">CURRENT/COD ACCOUNTS:</div><div>EFT Payment: 2 days prior to collection/delivery. Funds to reflect in our FNB account. ATM transactions 7 days to clear Credit Card Facility available for COD accounts only.</div><div>CASH HANDLING FEE: 1.5% additional bank charges for cash deposits over R10,000.00 will be payable by you.</div><div class="c" style="font-weight:600">ALL ACCOUNTS:</div><div>No Cheques Accepted!  Prices quoted are for stock on hand.  Prices quotes are valid for 30days.</div></div>
-    <div class="inv-foot">
-      <div class="inv-recv"><div style="margin-bottom:6px">Representative:</div><div class="ln"><span>Received by</span></div><div class="ln"><span>Date</span></div><div class="ln"><span>Signature</span></div><div class="inv-note">No goods are returnable should the items not be in a completely resalable condition, or physically damaged in any way. Warranty is based on a "carry-in" condition only. Please see our Warranty and Service Guidelines, Terms and Conditions on our website: ${SELLER.web}</div></div>
-      <div class="inv-totbox"><div class="r"><span>Total(Excl)</span><span>${money(t.excl)}</span></div><div class="r"><span>VAT(15%)</span><span>${money(t.vat)}</span></div><div class="r"><span>Total(Incl) Rand</span><span>${money(t.incl)}</span></div><div class="cur">South African Rands</div></div>
+    <table class="inv-tbl">
+      <thead><tr><th style="width:16%">Item Code</th><th style="width:40%">Item Description</th><th style="width:12%">Quantity</th><th style="width:16%">Unit Price</th><th style="width:16%">Total(Excl)</th></tr></thead>
+      <tbody>
+        ${rows.map(it=>`<tr><td>${escapeHtml(it.code||'')}</td><td>${escapeHtml(it.desc||'')}</td><td class="n">${Number(it.qty)||0}</td><td class="n">${money(it.price)}</td><td class="n">${money((Number(it.qty)||0)*(Number(it.price)||0))}</td></tr>`).join('')}
+        ${Array.from({length:Math.max(0,3-rows.length)}).map(()=>`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`).join('')}
+      </tbody>
+    </table>
+    <table class="inv-sum">
+      <tr><td style="width:84%">Total (Excl)</td><td class="n">${money(t.excl)}</td></tr>
+      <tr><td>VAT (15%)</td><td class="n">${money(t.vat)}</td></tr>
+      <tr><td><b>Total</b></td><td class="n"><b>${money(t.incl)}</b></td></tr>
+    </table>
+    <div class="inv-boiler">
+      <div class="c" style="font-weight:600">CURRENT/COD ACCOUNTS:</div>
+      <div>EFT Payment: 2 days prior to collection/delivery. Funds to reflect in our FNB account. ATM transactions 7 days to clear Credit Card Facility available for COD accounts only.</div>
+      <div>CASH HANDLING FEE: 1.5% additional bank charges for cash deposits over R10,000.00 will be payable by you.</div>
+      <div class="c" style="font-weight:600">ALL ACCOUNTS:</div>
+      <div>No Cheques Accepted!  Prices quoted are for stock on hand.  Prices quotes are valid for 30days.</div>
     </div>
-    <div class="inv-web">${SELLER.web}</div>`;
+    <div class="inv-foot">
+      <div class="inv-recv">
+        <div style="margin-bottom:6px">Representative:</div>
+        <div class="ln"><span>Received by</span></div>
+        <div class="ln"><span>Date</span></div>
+        <div class="ln"><span>Signature</span></div>
+        <div class="inv-note">No goods are returnable should the items not be in a completely resalable condition, or physically damaged in any way. Warranty is based on a "carry-in" condition only. Please see our Warranty and Service Guidelines, Terms and Conditions on our website: ${SELLER.web}</div>
+      </div>
+      <div class="inv-totbox">
+        <div class="r"><span>Total(Excl)</span><span>${money(t.excl)}</span></div>
+        <div class="r"><span>VAT(15%)</span><span>${money(t.vat)}</span></div>
+        <div class="r"><span>Total(Incl) Rand</span><span>${money(t.incl)}</span></div>
+        <div class="cur">South African Rands</div>
+      </div>
+    </div>
+    <div class="inv-web">${SELLER.web}</div>
+  `;
   return node;
 }
 
-/* ================= PREVIEW (fullscreen) ================= */
+/* ================= PREVIEW ================= */
 function showInvoicePreview(){
-  const ref=assignRef();document.getElementById('invRef').value=ref;
+  const ref=assignRef();
+  document.getElementById('invRef').value=ref;
   const node=buildInvoiceNode(ref);
-  const w=document.createElement('div');w.className='invwrap';
-  w.innerHTML=`<div class="invtop"><button class="btn ghost" id="pvClose">关闭</button><button class="btn primary" id="pvPdf">导出 PDF</button></div><div class="invscroll"></div>`;
-  w.querySelector('.invscroll').appendChild(node);document.body.appendChild(w);
-  w.querySelector('#pvClose').onclick=()=>w.remove();
-  w.querySelector('#pvPdf').onclick=()=>{w.remove();exportPDF();};
+  const ov=document.createElement('div');ov.className='overlay';
+  const box=document.createElement('div');box.className='modal';box.style.width='min(860px,96vw)';
+  box.innerHTML=`<h2>税单预览</h2><div class="inv-scroll"></div><div class="btnrow"><button class="btn ghost" id="pvClose">关闭</button><button class="btn primary" id="pvPdf">导出 PDF</button></div>`;
+  box.querySelector('.inv-scroll').appendChild(node);
+  ov.appendChild(box);document.body.appendChild(ov);
+  box.querySelector('#pvClose').onclick=()=>ov.remove();
+  box.querySelector('#pvPdf').onclick=()=>{ov.remove();exportPDF();};
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
 }
 
-/* ================= EXPORT ================= */
+/* ================= EXPORT PDF ================= */
 async function exportPDF(){
-  if(!validate())return;
+  if(!validateBeforeExport()) return;
   const date=document.getElementById('invDate').value||new Date().toISOString().slice(0,10);
-  const ref=assignRef();document.getElementById('invRef').value=ref;
+  const ref=assignRef();
+  document.getElementById('invRef').value=ref;
   const node=buildInvoiceNode(ref);
   const mount=document.getElementById('renderMount');mount.innerHTML='';mount.appendChild(node);
   try{
     const canvas=await html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-    const {jsPDF}=window.jspdf;const pdf=new jsPDF('p','mm','a4');
-    const pw=210,ph=297,m=8,iw=pw-m*2,ih=canvas.height*iw/canvas.width;
-    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',m,m,iw,Math.min(ih,ph-m*2));
-    pdf.save(`SKYKING_${ref}.pdf`);commitRef(ref,date);
-  }catch(e){console.error(e);const w=window.open('','_blank');if(w){w.document.write('<html><body>'+node.outerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),400);}else alert('导出失败，请检查网络后重试。');}
-  finally{mount.innerHTML='';}
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF('p','mm','a4');
+    const pw=210, ph=297, margin=8;
+    const iw=pw-margin*2;
+    const ih=canvas.height*iw/canvas.width;
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',margin,margin,iw,Math.min(ih,ph-margin*2));
+    pdf.save(`SKYKING_${ref}.pdf`);
+    commitRef(ref,date);
+  }catch(e){
+    console.error(e);
+    // fallback to print
+    printFallback(node);
+  }finally{ mount.innerHTML=''; }
 }
+function printFallback(node){
+  const w=window.open('','_blank');
+  w.document.write('<html><head><title>SKYKING Invoice</title></head><body>'+node.outerHTML+'</body></html>');
+  w.document.close();w.focus();setTimeout(()=>w.print(),400);
+}
+
+/* ================= EXPORT EXCEL ================= */
 function exportExcel(){
-  if(!validate())return;
+  if(!validateBeforeExport()) return;
   const cust=getSelectedCustomer();
   const date=document.getElementById('invDate').value||new Date().toISOString().slice(0,10);
-  const ref=assignRef();document.getElementById('invRef').value=ref;
+  const ref=assignRef();
+  document.getElementById('invRef').value=ref;
   const t=calcTotals(items);
   const rows=items.filter(it=>(it.desc||'').trim()||Number(it.qty)||Number(it.price));
-  const aoa=[["SKYKING®","","","TAX INVOICE",""],[SELLER.reg],...SELLER.lines.map(l=>[l]),[],
-    ["Date",date,"Reference",ref],["Bill To",cust?cust.name:""],["Address",cust?cust.addr.replace(/\n/g,', '):""],
-    ["VAT",cust?cust.vat:"","Reg",cust?cust.reg:""],["Contact",cust?cust.contact:""],[],
+  const aoa=[
+    ["SKYKING®","","","TAX INVOICE",""],
+    [SELLER.reg],
+    ...SELLER.lines.map(l=>[l]),
+    [],
+    ["Date",date,"Reference",ref],
+    ["Bill To",cust?cust.name:""],
+    ["Address",cust?cust.addr.replace(/\n/g,', '):""],
+    ["VAT",cust?cust.vat:"","Reg",cust?cust.reg:""],
+    ["Contact",cust?cust.contact:""],
+    [],
     ["Item Code","Item Description","Quantity","Unit Price","Total(Excl)"],
-    ...rows.map(it=>["Accessories",it.desc||'',Number(it.qty)||0,Number(it.price)||0,(Number(it.qty)||0)*(Number(it.price)||0)]),[],
-    ["","","","Total (Excl)",Number(money(t.excl))],["","","","VAT (15%)",Number(money(t.vat))],
-    ["","","","Total (Incl)",Number(money(t.incl))],["","","","Currency","South African Rands"]];
-  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:14},{wch:32},{wch:10},{wch:12},{wch:14}];
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Tax Invoice");
-  XLSX.writeFile(wb,`SKYKING_${ref}.xlsx`);commitRef(ref,date);
+    ...rows.map(it=>[it.code||'',it.desc||'',Number(it.qty)||0,Number(it.price)||0,(Number(it.qty)||0)*(Number(it.price)||0)]),
+    [],
+    ["","","","Total (Excl)",Number(money(t.excl))],
+    ["","","","VAT (15%)",Number(money(t.vat))],
+    ["","","","Total (Incl)",Number(money(t.incl))],
+    ["","","","Currency","South African Rands"]
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:14},{wch:32},{wch:10},{wch:12},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Tax Invoice");
+  XLSX.writeFile(wb,`SKYKING_${ref}.xlsx`);
+  commitRef(ref,date);
 }
-function validate(){
+
+function validateBeforeExport(){
   if(!getSelectedCustomer()){alert("请先选择客户。");return false;}
   const rows=items.filter(it=>(it.desc||'').trim()&&(Number(it.price)||Number(it.qty)));
   if(!rows.length){alert("请至少填写一条有效的商品明细。");return false;}
   return true;
 }
 
-/* ================= CUSTOMERS ================= */
+/* ================= CUSTOMER MANAGEMENT ================= */
 function renderCustList(){
   const el=document.getElementById('custList');
   el.innerHTML=customers.map(c=>`
@@ -522,36 +662,69 @@ function renderCustList(){
       ${c.reg?`<div class="kv">Reg: ${escapeHtml(c.reg)}</div>`:''}
       ${c.regDate?`<div class="kv">注册时间: ${escapeHtml(c.regDate)}</div>`:''}
       ${c.contact?`<div class="kv">联系: ${escapeHtml(c.contact)}</div>`:''}
-      ${c.aliases?`<div class="kv" style="color:#0a84ff">别名: ${escapeHtml(c.aliases)}</div>`:''}
-      <div class="actions"><button onclick="openCustForm('${c.id}')">编辑</button><button class="del" onclick="delCust('${c.id}')">删除</button></div>
-    </div>`).join('')||'<p class="muted" style="margin-top:14px">还没有客户，点右上角新增。</p>';
+      ${c.aliases?`<div class="kv" style="color:#0071e3">别名: ${escapeHtml(c.aliases)}</div>`:''}
+      <div class="actions">
+        <button onclick="openCustForm('${c.id}')">编辑</button>
+        <button class="del" onclick="delCust('${c.id}')">删除</button>
+      </div>
+    </div>`).join('') || '<p class="muted">还没有客户，点击右上角新增。</p>';
 }
 function openCustForm(id){
   editingCustId=id||null;
   const c=id?customers.find(x=>x.id===id):{name:'',addr:'',vat:'',reg:'',regDate:'',contact:'',aliases:''};
-  const s=document.createElement('div');s.className='sheet';s.id='custSheet';
-  s.innerHTML=`<div class="panel"><div class="grip"></div><h2>${id?'编辑客户':'新增客户'}</h2>
-    <div class="field"><label>公司全称 *</label><input id="f_name" value="${escapeAttr(c.name)}"></div>
-    <div class="field"><label>注册地址（可多行）</label><textarea id="f_addr" rows="2">${escapeHtml(c.addr)}</textarea></div>
-    <div class="row2"><div class="field"><label>VAT 税号</label><input id="f_vat" value="${escapeAttr(c.vat)}"></div><div class="field"><label>注册号 Reg</label><input id="f_reg" value="${escapeAttr(c.reg)}"></div></div>
-    <div class="row2"><div class="field"><label>注册时间</label><input id="f_regDate" value="${escapeAttr(c.regDate)}" placeholder="如 2017-06"></div><div class="field"><label>联系方式</label><input id="f_contact" value="${escapeAttr(c.contact)}"></div></div>
-    <div class="field"><label>截图匹配别名（逗号分隔）</label><input id="f_aliases" value="${escapeAttr(c.aliases)}" placeholder="cajee, v-cajee"></div>
-    <div class="stack"><button class="btn primary" onclick="saveCustForm()">保存</button><button class="btn ghost" onclick="closeCustForm()">取消</button></div></div>`;
-  document.body.appendChild(s);
-  s.addEventListener('click',e=>{if(e.target===s)closeCustForm();});
+  const ov=document.createElement('div');ov.className='overlay';ov.id='custOverlay';
+  ov.innerHTML=`
+    <div class="modal">
+      <h2>${id?'编辑客户':'新增客户'}</h2>
+      <div class="field"><label>公司全称 *</label><input id="f_name" value="${escapeAttr(c.name)}"></div>
+      <div class="field"><label>注册地址（可多行）</label><textarea id="f_addr" rows="2">${escapeHtml(c.addr)}</textarea></div>
+      <div class="row2">
+        <div class="field"><label>VAT 税号</label><input id="f_vat" value="${escapeAttr(c.vat)}"></div>
+        <div class="field"><label>注册号 (Reg)</label><input id="f_reg" value="${escapeAttr(c.reg)}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>注册时间</label><input id="f_regDate" value="${escapeAttr(c.regDate)}" placeholder="如 2017-06"></div>
+        <div class="field"><label>联系方式</label><input id="f_contact" value="${escapeAttr(c.contact)}"></div>
+      </div>
+      <div class="field"><label>截图匹配别名（逗号分隔，如 cajee, v-cajee）</label><input id="f_aliases" value="${escapeAttr(c.aliases)}"></div>
+      <div class="btnrow">
+        <button class="btn ghost" onclick="closeCustForm()">取消</button>
+        <button class="btn primary" onclick="saveCustForm()">保存</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeCustForm();});
 }
-function closeCustForm(){const o=document.getElementById('custSheet');if(o)o.remove();}
+function closeCustForm(){const o=document.getElementById('custOverlay');if(o)o.remove();}
 function saveCustForm(){
-  const name=document.getElementById('f_name').value.trim();if(!name){alert('请填写公司全称');return;}
-  const data={name,addr:document.getElementById('f_addr').value,vat:document.getElementById('f_vat').value.trim(),reg:document.getElementById('f_reg').value.trim(),regDate:document.getElementById('f_regDate').value.trim(),contact:document.getElementById('f_contact').value.trim(),aliases:document.getElementById('f_aliases').value.trim()};
-  if(editingCustId){Object.assign(customers.find(x=>x.id===editingCustId),data);}else{data.id='c'+Date.now();customers.push(data);}
+  const name=document.getElementById('f_name').value.trim();
+  if(!name){alert('请填写公司全称');return;}
+  const data={
+    name,
+    addr:document.getElementById('f_addr').value,
+    vat:document.getElementById('f_vat').value.trim(),
+    reg:document.getElementById('f_reg').value.trim(),
+    regDate:document.getElementById('f_regDate').value.trim(),
+    contact:document.getElementById('f_contact').value.trim(),
+    aliases:document.getElementById('f_aliases').value.trim()
+  };
+  if(editingCustId){
+    const c=customers.find(x=>x.id===editingCustId);Object.assign(c,data);
+  }else{
+    data.id='c'+Date.now();customers.push(data);
+  }
   saveCustomers(customers);closeCustForm();renderCustList();refreshCustSelect();
 }
-function delCust(id){if(!confirm('确定删除该客户？'))return;customers=customers.filter(c=>c.id!==id);saveCustomers(customers);renderCustList();refreshCustSelect();}
+function delCust(id){
+  if(!confirm('确定删除该客户？'))return;
+  customers=customers.filter(c=>c.id!==id);saveCustomers(customers);renderCustList();refreshCustSelect();
+}
 
-/* ================= UTIL / INIT ================= */
+/* ================= UTIL ================= */
 function escapeHtml(s){return String(s??'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
 function escapeAttr(s){return String(s??'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+/* init */
 refreshCustSelect();
 document.getElementById('invDate').value=new Date().toISOString().slice(0,10);
 </script>
